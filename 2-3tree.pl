@@ -20,13 +20,13 @@ branch(X) :- is_node2(X); is_node3(X).
 %     ((branch(NM), lowest(NM, MLR), MLR > IL, greatest(NM, MRR), MRR < IR); NM = empty).
 
 exists(node2(I, _, _), X) :- X = I.
-exists(node2(I, branch(NL), _), X) :- X < I, exists(NL, X).
-exists(node2(I, _, (NL)), X) :- X > I, exists(NL, X).
+exists(node2(I, branch(NL), _), X) :- X < I, !, exists(NL, X).
+exists(node2(I, _, (NL)), X) :- X > I, !, exists(NL, X).
 
-exists(node3(IL, IR, _, _, _), X) :- X = IL; X = IR.
-exists(node3(IL, _, branch(N), _, _), X) :- X < IL, exists(X, N).
-exists(node3(IL, IR, _ , branch(N), _), X) :- X > IL, X < IR, exists(X, N).
-exists(node3(_, IR, _, _, branch(N)), X) :- X > IR, exists(X, N).
+exists(node3(IL, IR, _, _, _), X) :- X = IL, !; X = IR, !.
+exists(node3(IL, _, branch(N), _, _), X) :- X < IL, !, exists(X, N).
+exists(node3(IL, IR, _ , branch(N), _), X) :- X > IL, X < IR, !, exists(X, N).
+exists(node3(_, IR, _, _, branch(N)), X) :- X > IR, !, exists(X, N).
 
 insert_sorted([], V, R) :- R = [V].
 insert_sorted([A|N], V, R) :- V < A, R = [V,A|N].
@@ -40,33 +40,33 @@ sort_insert(P, R) :- sort_insert([], P, R).
 
 was_promoted(promote(V, NL, NR), promote(V, NL, NR)).
 
-insert_node_internal(empty, V, R) :- R = node2(V, empty, empty).
-insert_node_internal(node2(IL, empty, empty), V, R) :- sort_insert([IL, V], [S1, S2]),
-    R = node3(S1, S2, empty, empty, empty), !.
-insert_node_internal(node3(IL, IR, empty, empty, empty), V, R) :- sort_insert([IL, IR, V], [S1, S2, S3]),
-    R = promote(S2, node2(S1, empty, empty), node2(S3, empty, empty)),!.
+insert_node_internal(empty, V, R) :- !, R =  node2(V, empty, empty).
+insert_node_internal(node2(IL, empty, empty), V, R) :- !, sort_insert([IL, V], [S1, S2]),
+    R = node3(S1, S2, empty, empty, empty).
+insert_node_internal(node3(IL, IR, empty, empty, empty), V, R) :- !, sort_insert([IL, IR, V], [S1, S2, S3]),
+    R = promote(S2, node2(S1, empty, empty), node2(S3, empty, empty)).
 
-insert_node_internal(node2(I, NL, NR), V, R) :- V < I, insert_node_internal(NL, V, R2),
+insert_node_internal(node2(I, NL, NR), V, R) :- V < I, !, insert_node_internal(NL, V, R2),
     ((was_promoted(R2, promote(V2, PL, PR)), R = node3(V2, I, PL, PR, NR), !);
     R = node2(I, R2, NR)).
-insert_node_internal(node2(I, NL, NR), V, R) :- V > I, insert_node_internal(NR, V, R2),
+insert_node_internal(node2(I, NL, NR), V, R) :- V > I, !, insert_node_internal(NR, V, R2),
     ((was_promoted(R2, promote(V2, PL, PR)), R = node3(I, V2, NL, PL, PR), !);
     R = node2(I, NL, R2)).
 
-insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V > IR, insert_node_internal(NR, V, R2),
-    ((was_promoted(R2, promote(V2, PL, PR)), R = promote(IR, node2(IL, NL, NM), node2(V2, PL, PR)), !);
-    R = node3(IL, IR, NL, NM, R2)), !.
-insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V < IL, insert_node_internal(NL, V, R2),
+insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V > IR, !, insert_node_internal(NR, V, R2),
+    ((was_promoted(R2, promote(V2, PL, PR)), R = promote(IR, node2(IL, NL, NM), node2(V2, PL, PR)));
+    R = node3(IL, IR, NL, NM, R2)).
+insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V < IL, !, insert_node_internal(NL, V, R2),
     ((was_promoted(R2, promote(V2, PL, PR)), R = promote(IL, node2(V2, PL, PR), node2(IR, NM, NR)),  !);
-    R = node3(IL, IR, R2, NM, NR)), !.
-insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V \= IL, V \= IR, insert_node_internal(NM, V, R2),
+    R = node3(IL, IR, R2, NM, NR)).
+insert_node_internal(node3(IL, IR, NL, NM, NR), V, R) :- V > IL, V < IR, !, insert_node_internal(NM, V, R2),
     ((was_promoted(R2, promote(V2, PL, PR)), R = promote(V2, node2(IL, NL, PL), node2(IR, PR, NR)),  !);
-    R = node3(IL, IR, NL, R2, NR)), !.
+    R = node3(IL, IR, NL, R2, NR)).
 
 insert_node(N, V, R) :- insert_node_internal(N, V, R2),
-    ((was_promoted(R2, promote(V2, PL, PR)), R = node2(V2, PL, PR), !);
-    R = R2, !
+    ((was_promoted(R2, promote(V2, PL, PR)), R = node2(V2, PL, PR));
+    R = R2
     ).
 
 insert_all(N, [], N).
-insert_all(N, [V | L], R) :- insert_node(N, V, R2), insert_all(R2, L, R).
+insert_all(N, [V | L], R) :- insert_node(N, V, R2), insert_all(R2, L, R), !.
