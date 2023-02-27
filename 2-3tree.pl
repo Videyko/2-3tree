@@ -70,3 +70,66 @@ insert_node(N, V, R) :- insert_node_internal(N, V, R2),
 
 insert_all(N, [], N).
 insert_all(N, [V | L], R) :- insert_node(N, V, R2), insert_all(R2, L, R), !.
+
+
+% delete_node(+Tree, +Value, -Result)
+% Deletes a value from the given 2-3 tree.
+delete_node(empty, _, empty).
+delete_node(node2(I, empty, empty), I, empty).
+delete_node(node2(I, NL, NR), V, R) :-
+    V < I,
+    delete_node(NL, V, NL2),
+    merge2(I, NL2, NR, R).
+delete_node(node2(I, NL, NR), V, R) :-
+    V > I,
+    delete_node(NR, V, NR2),
+    merge2(I, NL, NR2, R).
+delete_node(node3(IL, IR, empty, empty, empty), V, R) :-
+    (V = IL; V = IR),
+    R = node2(IL, empty, empty).
+delete_node(node3(IL, IR, NL, empty, NR), V, R) :-
+    V < IL,
+    delete_node(NL, V, NL2),
+    merge3(IL, IR, NL2, empty, NR, R).
+delete_node(node3(IL, IR, NL, empty, NR), V, R) :-
+    V = IL,
+    merge2(IR, NL, NR, R).
+delete_node(node3(IL, IR, NL, empty, NR), V, R) :-
+    V > IL,
+    V < IR,
+    delete_node(NR, V, NR2),
+    merge3(IL, IR, NL, empty, NR2, R).
+delete_node(node3(IL, IR, NL, NM, empty), V, R) :-
+    V = IR,
+    merge2(IL, NL, NM, R).
+delete_node(node3(IL, IR, NL, NM, empty), V, R) :-
+    V < IR,
+    delete_node(NM, V, NM2),
+    merge3(IL, IR, NL, NM2, empty, R).
+delete_node(node3(IL, IR, empty, NM, NR), V, R) :-
+    V = IL,
+    merge2(IR, NM, NR, R).
+delete_node(node3(IL, IR, empty, NM, NR), V, R) :-
+    V > IL,
+    V < IR,
+    delete_node(NM, V, NM2),
+    merge3(IL, IR, empty, NM2, NR, R).
+delete_node(node3(IL, IR, NL, NM, NR), V, R) :-
+    V = IL,
+    merge2(IR, NL, NM, R).
+delete_node(node3(IL, IR, NL, NM, NR), V, R) :-
+    V = IR,
+    merge2(IL, NM, NR, R).
+delete_node(node3(IL, IR, NL, NM, NR), V, R) :-
+    V < IL,
+    delete_node(NL, V, NL2),
+    merge3(IL, IR, NL2, NM, NR, R).
+delete_node(node3(IL, IR, NL, NM, NR), V, R) :-
+    V > IR,
+    delete_node(NR, V, NR2),
+    merge3(IL, IR, NL, NM, NR2, R).
+    
+% merge2(+I, +L, +R, -Result)
+% Merges two nodes with the given values and left and right children into a single node.
+merge2(I, empty, empty, node2(I, empty, empty)).
+merge2(I, node2(L, LL, LR), empty, node3(L, I, LL, LR, empty)).
